@@ -8,6 +8,8 @@ using System.Windows.Forms;
 using System.Xml;
 using System.IO;
 using OneNote = Microsoft.Office.Interop.OneNote;
+using System.Text.RegularExpressions;
+using HtmlAgilityPack;
 
 
 namespace Text_File_Importer
@@ -174,6 +176,95 @@ namespace Text_File_Importer
             }
         }
 
+        private void buttonExport_Click(object sender, EventArgs e)
+        {
+            string strPath = "", result = "Unfiled Notes";
+            onApp.NavigateTo(notebookID[treeView1.SelectedNode.Index], System.String.Empty, false);
+            strPath = pathToNotebook[treeView1.SelectedNode.Index];
+            result = treeView1.SelectedNode.Text;
+
+            // このNotebook内のすべてのページIDを取得する処理を行う
+            string xmlHierarchy;
+            string notebookId = notebookID[treeView1.SelectedNode.Index];
+            onApp.GetHierarchy(notebookId, OneNote.HierarchyScope.hsPages, out xmlHierarchy);
+            XmlDocument doc = new XmlDocument();
+            doc.LoadXml(xmlHierarchy);
+
+            XmlNamespaceManager nsMgr = new XmlNamespaceManager(doc.NameTable);
+            nsMgr.AddNamespace("one", "http://schemas.microsoft.com/office/onenote/2013/onenote");
+
+            // 保存のルートディレクトリ
+            string rootDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+
+            // Notebookのフォルダを作成
+            string notebookDirectory = Path.Combine(rootDirectory, result); // resultはNotebookの名前
+            Directory.CreateDirectory(notebookDirectory);
+
+            var htmlDoc = new HtmlAgilityPack.HtmlDocument();
+
+
+            // 新しく追加するコード
+            XmlNodeList sectionNodes = doc.SelectNodes("//one:Section", nsMgr);
+            foreach (XmlNode sectionNode in sectionNodes)
+            {
+                string sectionName = sectionNode.Attributes["name"].Value;
+                Console.WriteLine("Processing section: " + sectionName);  // 何らかの処理
+
+                // セクションのフォルダを作成
+                string sectionDirectory = Path.Combine(notebookDirectory, sectionName);
+                Directory.CreateDirectory(sectionDirectory);
+
+                XmlNodeList pageNodes = sectionNode.SelectNodes("one:Page", nsMgr);
+                foreach (XmlNode page in pageNodes)
+                {
+                    string pageName = page.Attributes["name"].Value;
+                    Console.WriteLine("  Processing page: " + pageName);  // 何らかの処理
+
+                    string pageId = page.Attributes["ID"].Value;
+
+                    // ページの内容を取得
+                    string pageContentXml;
+                    onApp.GetPageContent(pageId, out pageContentXml, OneNote.PageInfo.piAll);
+                    XmlDocument pageDoc = new XmlDocument();
+                    pageDoc.LoadXml(pageContentXml);
+
+                    XmlNamespaceManager nsMgrPage = new XmlNamespaceManager(pageDoc.NameTable);
+                    nsMgrPage.AddNamespace("one", "http://schemas.microsoft.com/office/onenote/2013/onenote");
+
+                    // ページのタイトルを取得（2番目のone:Tを選ぶ）
+                    XmlNodeList titleNodes = pageDoc.SelectNodes("//one:Title//one:T", nsMgrPage);
+                    XmlNode titleNode = titleNodes.Count > 1 ? titleNodes[1] : (titleNodes.Count > 0 ? titleNodes[0] : null);  // タイトルが2つ以上なら2番目、それ以外は1番目かnull
+                    string titleText = titleNode != null ? titleNode.InnerText : "Untitled";  // タイトルがない場合は"Untitled"
+
+                    // タイトルからHTML/XMLタグを削除
+                    titleText = Regex.Replace(titleText, "\r\n", String.Empty);
+                    titleText = Regex.Replace(titleText, "<.*?>", String.Empty);
+
+                    // ページの本文を取得
+                    StringBuilder pageContent = new StringBuilder();
+                    XmlNodeList outlineNodes = pageDoc.SelectNodes("//one:Outline//one:T", nsMgrPage);
+                    foreach (XmlNode outlineNode in outlineNodes)
+                    {
+                        if (outlineNode.InnerText != null)
+                        {
+                            string outlineText = outlineNode.InnerText;
+                            htmlDoc.LoadHtml(outlineText);
+                            var outlineText2 = HtmlEntity.DeEntitize(htmlDoc.DocumentNode.InnerText);
+                            pageContent.AppendLine(outlineText2);
+                        }
+                    }
+
+                    // 保存先のテキストファイル（この行を修正）
+                    string filePath = Path.Combine(sectionDirectory, titleText + ".txt");
+
+                    // テキストファイルに書き出し
+                    File.WriteAllText(filePath, pageContent.ToString());
+
+                }
+            }
+
+            MessageBox.Show("エクスポート完了！対象のNotebookは " + result + "だぞ。", "完成！", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
 
 
         /// <summary>

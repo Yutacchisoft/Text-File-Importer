@@ -41,6 +41,7 @@
             this.textNotebookPicker = new System.Windows.Forms.TextBox();
             this.label2 = new System.Windows.Forms.Label();
             this.progressBar1 = new System.Windows.Forms.ProgressBar();
+            this.buttonExport = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // buttonBrowse
@@ -125,11 +126,22 @@
             this.progressBar1.Size = new System.Drawing.Size(376, 21);
             this.progressBar1.TabIndex = 8;
             // 
+            // buttonExport
+            // 
+            this.buttonExport.Location = new System.Drawing.Point(302, 340);
+            this.buttonExport.Name = "buttonExport";
+            this.buttonExport.Size = new System.Drawing.Size(75, 21);
+            this.buttonExport.TabIndex = 9;
+            this.buttonExport.Text = "Export";
+            this.buttonExport.UseVisualStyleBackColor = true;
+            this.buttonExport.Click += new System.EventHandler(this.buttonExport_Click);
+            // 
             // FormTextImporter
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(400, 429);
+            this.Controls.Add(this.buttonExport);
             this.Controls.Add(this.progressBar1);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.textNotebookPicker);
@@ -160,6 +172,7 @@
         private System.Windows.Forms.TextBox textNotebookPicker;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.ProgressBar progressBar1;
+        private System.Windows.Forms.Button buttonExport;
     }
 }
 
